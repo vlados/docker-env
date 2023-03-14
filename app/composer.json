@@ -1,0 +1,15 @@
+{
+    "name": "vladi/app",
+    "autoload": {
+        "psr-4": {
+            "Vladi\\App\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Vladislav Stoitsov",
+            "email": "dev@vladko.dev"
+        }
+    ],
+    "require": {}
+}
