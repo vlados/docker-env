@@ -1,11 +1,57 @@
 version: '3.9'
-
 services:
-  php:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+      - "81:81"
+      - "82:82"
+      - "83:83"
+    volumes:
+      - .docker/nginx/sites:/etc/nginx/conf.d
+      - .docker/logs/nginx:/var/log/nginx
+      - ${REACT_PATH}:/var/www/react
+      - ${ANGULAR_PATH}:/var/www/angular
+      - ${API_PATH}:/var/www/api
+    depends_on:
+      - api
+      - external-api
 
+  mysql:
+    image: mysql:latest
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./.docker/data/mysql:/var/lib/mysql
+      - ./.docker/mysql/my.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf # config mysql server
+
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+
+  redis-cache:
+    image: redis:latest
+    restart: always
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+
+  api:
+    build:
+      context: .docker/api
+      args:
+        - XDEBUG=${XDEBUG}
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
+
+    restart: always
     mem_limit: 512M
     cpus: 0.5
     mem_reservation: 256M
@@ -18,66 +64,71 @@ services:
         timeout: 10s
         retries: 3
         start_period: 1m
-
-    image: php:8.1-fpm
-    restart: always
     volumes:
-      - ./app:/var/www/app
+      - ${API_PATH}:/var/www/api
 
     environment:
-      PHP_OPCACHE: 1
-      PHP_ERROR_REPORTING: E_ALL
-      PHP_DISPLAY_ERRORS: 1
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306
+    depends_on:
+      - mysql
+      - redis
 
-    networks:
-      - app_net
-
-  nginx:
-    image: nginx:latest
-    restart: always
+  external-api:
+    build:
+      context: .docker/edi
+      args:
+        - XDEBUG=${XDEBUG}
     mem_limit: 512M
     cpus: 0.5
+    mem_reservation: 256M
+    memswap_limit: 512M
+    mem_swappiness: 0
 
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./.docker/nginx/sites:/etc/nginx/conf.d
-      - ./react:/var/www/react
-    depends_on:
-      - php
-      - mysql
-    networks:
-      - app_net
-  mysql:
-    image: mysql:latest
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+
     restart: always
+    volumes:
+      - ${EDI_PATH}:/var/www/edi
     environment:
-      - MYSQL_ROOT_PASSWORD=password
-      - MYSQL_DATABASE=my_db
-      - MYSQL_USER=my_user
-      - MYSQL_PASSWORD=my_password
-    volumes:
-      - ./.docker/data/mysql:/var/lib/mysql
-    networks:
-      - app_net
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306
+    depends_on:
+      - mysql
+      - redis
 
-  redis:
-    image: redis:latest
+  mailtrap:
+    image: mailhog/mailhog
     restart: always
     ports:
-      - "6379:6379"
-    networks:
-      - app_net
+      - "1025:1025"
+      - "84:8025"
 
-  redis-cache:
-    image: redis:latest
+  dbgate:
+    image: dbgate/dbgate:latest
     restart: always
-    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
-    networks:
-      - app_net
+    ports:
+      - "85:3000"
+    volumes:
+      - dbgate-data:/root/.dbgate
+    environment:
+      CONNECTIONS: con1,con2
 
-networks:
-  app_net:
-    driver: bridge
+      LABEL_con1: MySQL
+      SERVER_con1: dockerhost
+      USER_con1: root
+      PASSWORD_con1: ${MYSQL_ROOT_PASSWORD}
+      PORT_con1: 3306
+      ENGINE_con1: mysql@dbgate-plugin-mysql
 
+      LABEL_con2: Redis
+      SERVER_con2: dockerhost
+      PORT_con2: 6379
+      ENGINE_con2: redis@dbgate-plugin-redis
+
+volumes:
+  mysql-data:
+  dbgate-data:
