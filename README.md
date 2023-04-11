@@ -23,3 +23,10 @@
 - `/edi` - External EDI API
 - `/react` - React app for MySCM app
 - `/angular` - Angular app for MySCM app
+
+
+# TODO
+- [ ] Make EDI API work
+- [ ] Make Angular app work
+- [ ] Make React app work
+- [ ] Fix bug if filename is not app.php in Symfony 3.4 API returns 404
