@@ -16,6 +16,7 @@ RUN apk update && apk add --no-cache \
     oniguruma-dev \
     linux-headers \
     gettext-dev \
+    mysql-client \
     bash
 
 # Install PHP extensions
@@ -36,7 +37,7 @@ RUN docker-php-ext-install \
     sockets
 
 RUN apk --no-cache add pcre-dev ${PHPIZE_DEPS} \
-  && pecl install redis \
+  && pecl install redis-3.1.6 \
   && docker-php-ext-enable redis \
   && apk del pcre-dev ${PHPIZE_DEPS}
 
@@ -71,3 +72,38 @@ ENV GID=${GID}
 RUN addgroup -g ${GID} --system symfony
 RUN adduser -G symfony --system -D -s /bin/sh -u ${UID} symfony
 RUN chown -R symfony:symfony /var/www/api
+
+# Enviorment variables (needed for bin/console commands)
+ENV LOCALTIME ${TIMEZONE}
+ENV MYFM__MAILER__USER user
+ENV MYFM__MAILER__PASSWORD pass
+
+ENV MYFM__ENV                dev
+ENV MYFM__DATABASE__HOST     mysql
+ENV MYFM__DATABASE__PORT     3306
+ENV MYFM__MAIL__BASE__URL http://localhost:89
+
+ENV MYFM__EDI__BUCKET__ID                  newagent-8ec77.appspot.com
+ENV MYFM__EDI__BUCKET__CREDENTIALS         /var/www/api/web/private_key.local.json
+ENV MYFM__UPLOADS__BUCKET__ID              newagent-8ec77.appspot.com
+ENV MYFM__UPLOADS__BUCKET__CREDENTIALS     /var/www/api/web/private_key.local.json
+ENV MYFM__URL__INTERNAL__HOSTNAME          localhost
+ENV MYFM__URL__EXTERNAL__URL               http://localhost:89/
+ENV MYFM__REDIS__URL                       redis://redis
+ENV MYFM__MONITORING__CREDENTIALS          /var/www/api/web/private_key.monitoring.json
+ENV MYFM__URL__INTERNAL__URL               http://localhost
+ENV MYFM__POD__IP                          localhost
+ENV MYFM__POD__NAME                        myscm-dev-backend-deployment-
+ENV MYFM__HOST__IP                         localhost
+ENV MYFM__MONITORING__ENVIRONNEMENT        build
+ENV MYFM__APP__SECRET                      ThisTokenIsNotSoSecretChangeIt
+ENV PURGE_DEADLINE                          200
+ENV PURGE_HARDRUN                           false
+ENV PURGE_STEPS                             3
+ENV PURGE_MAXORDERS                         1
+ENV MYFM__PORTAL__USER                      myscm.public@gmail.com
+ENV MYFM__DATALAKE__BUCKET__ID                  newagent-8ec77.appspot.com
+ENV MYFM__DATALAKE__BUCKET__CREDENTIALS         /var/www/api/web/private_key.local.json
+
+ENV MYFM__PURGE_ORDER__BUCKET__CREDENTIALS /secrets/edi/credentials.json
+ENV MYFM__PURGE_ORDER__BUCKET__ID          fml-build-dig-myscm-dev-edi-bucket
