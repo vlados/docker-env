@@ -14,7 +14,9 @@ RUN apk update && apk add --no-cache \
     zlib-dev \
     libxml2-dev \
     oniguruma-dev \
-    linux-headers
+    linux-headers \
+    gettext-dev \
+    bash
 
 # Install PHP extensions
 RUN docker-php-ext-install \
@@ -24,7 +26,19 @@ RUN docker-php-ext-install \
     gd \
     opcache \
     mbstring \
-    exif
+    exif \
+    bcmath \
+    mbstring \
+    zip \
+    pcntl \
+    gettext \
+    exif \
+    sockets
+
+RUN apk --no-cache add pcre-dev ${PHPIZE_DEPS} \
+  && pecl install redis \
+  && docker-php-ext-enable redis \
+  && apk del pcre-dev ${PHPIZE_DEPS}
 
 # Install Xdebug conditionally
 ARG XDEBUG=false
