@@ -1,5 +1,6 @@
 # Executables (local)
 DOCKER_COMP = docker compose
+include .env
 
 # Docker containers
 CONTAINER=api
@@ -37,6 +38,12 @@ logs: ## Show live logs
 
 sh: ## Connect to the PHP FPM container
 	@$(PHP_CONT) zsh
+react-env: ## Build env-config.js for the react
+	@$(DOCKER_COMP) exec nginx sh -c "cd /var/www/bin/; bash env.sh; mv env-config.js /var/www/react"
+react-build: ## Build react and copy env-config.js
+	cd $(REACT_PATH); yarn build;
+	make react-env
+
 
 ## —— Composer 🧙 ——————————————————————————————————————————————————————————————
 composer: ## Run composer, pass the parameter "c=" to run a given command, example: make composer c='req symfony/orm-pack'
