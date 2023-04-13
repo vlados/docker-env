@@ -91,6 +91,8 @@ services:
       context: .docker/edi
       args:
         - XDEBUG=${XDEBUG}
+        - UID=${UID:-1000}
+        - GID=${GID:-1000}
     mem_limit: 512M
     cpus: 0.5
     mem_reservation: 256M
